@@ -1,0 +1,49 @@
+{
+  "pdf_path": "data/pdfs/2010_annual_2024.pdf",
+  "total_pages": 119,
+  "total_text_length": 306659,
+  "regex_matches": [
+    {
+      "pattern": "Retained\\s+Earnings[:\\s]*([\\d,]+\\.?\\d*)",
+      "raw_match": "Retained earnings 20,056,576",
+      "value": "20,056,576",
+      "numeric_value": 20056576.0,
+      "position": 19363
+    },
+    {
+      "pattern": "Retained\\s+Earnings\\s+([\\d,]+\\.?\\d*)",
+      "raw_match": "Retained earnings 20,056,576",
+      "value": "20,056,576",
+      "numeric_value": 20056576.0,
+      "position": 19363
+    },
+    {
+      "pattern": "([\\d,]+\\.?\\d*)\\s+Retained\\s+Earnings",
+      "raw_match": "41,237,301 Retained earnings",
+      "value": "41,237,301",
+      "numeric_value": 41237301.0,
+      "position": 19352
+    },
+    {
+      "pattern": "Retained\\s+earnings[:\\s]*([\\d,]+\\.?\\d*)",
+      "raw_match": "Retained earnings 20,056,576",
+      "value": "20,056,576",
+      "numeric_value": 20056576.0,
+      "position": 19363
+    }
+  ],
+  "context_lines": [
+    "Investments in associates and joint ventures 10 35,435,785 41,237,301 Retained earnings 20,056,576 28,116,139",
+    "reclassified to retained earnings. measured at the lower of cost i.e. historical purchase prices",
+    "(iii) Other non-cash movements mainly refer to appropriation for dividends from retained earnings.",
+    "retained earnings. This general reserve can be increased or",
+    "corresponding debit or credit to retained earnings through Security Act of 1974, as amended (“ERISA”). The funding"
+  ],
+  "best_match": {
+    "pattern": "Retained\\s+Earnings[:\\s]*([\\d,]+\\.?\\d*)",
+    "raw_match": "Retained earnings 20,056,576",
+    "value": "20,056,576",
+    "numeric_value": 20056576.0,
+    "position": 19363
+  }
+}

@@ -1,0 +1,68 @@
+[
+  {
+    "success": true,
+    "value": "20,056,576",
+    "numeric_value": 20056576.0,
+    "raw_match": "Retained earnings 20,056,576",
+    "total_matches": 4,
+    "total_pages": 119,
+    "text_length": 306659,
+    "company_symbol": "2010",
+    "pdf_filename": "2010_annual_2024.pdf"
+  },
+  {
+    "success": true,
+    "value": "4,509,836",
+    "numeric_value": 4509836.0,
+    "raw_match": "Retained earnings 4,509,836",
+    "total_matches": 7,
+    "total_pages": 137,
+    "text_length": 320718,
+    "company_symbol": "1050",
+    "pdf_filename": "1050_annual_2024.pdf"
+  },
+  {
+    "success": false,
+    "error": "No Retained Earnings found",
+    "total_pages": 103,
+    "text_length": 255609,
+    "company_symbol": "1010",
+    "pdf_filename": "1010_annual_2024.pdf"
+  },
+  {
+    "success": false,
+    "error": "could not convert string to float: ''",
+    "company_symbol": "1030",
+    "pdf_filename": "1030_annual_2024.pdf"
+  },
+  {
+    "success": true,
+    "value": "6,216,685",
+    "numeric_value": 6216685,
+    "raw_match": "Line-based extraction",
+    "total_matches": 12,
+    "total_pages": 89,
+    "text_length": 267126,
+    "company_symbol": "1080",
+    "pdf_filename": "1080_annual_2024.pdf"
+  },
+  {
+    "success": true,
+    "value": "12,578",
+    "numeric_value": 12578.0,
+    "raw_match": "Retained Earnings 12,578",
+    "total_matches": 4,
+    "total_pages": 114,
+    "text_length": 248183,
+    "company_symbol": "1060",
+    "pdf_filename": "1060_annual_2024.pdf"
+  },
+  {
+    "success": false,
+    "error": "No Retained Earnings found",
+    "total_pages": 145,
+    "text_length": 314524,
+    "company_symbol": "1020",
+    "pdf_filename": "1020_annual_2024.pdf"
+  }
+]
