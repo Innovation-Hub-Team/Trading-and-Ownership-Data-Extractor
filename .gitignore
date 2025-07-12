@@ -1,0 +1,10 @@
+Foreign Investment/
+data/
+*.db
+*.pdf
+*.DS_Store
+__pycache__/
+*.pyc
+.env
+venv/
+*.json 

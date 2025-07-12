@@ -2,6 +2,8 @@
 
 A backend system for analyzing foreign investment in Saudi companies by calculating reinvested earnings based on retained earnings and foreign ownership percentages.
 
+
+####### conda activate do
 ## Features
 
 - Scrapes foreign ownership data from Tadawul

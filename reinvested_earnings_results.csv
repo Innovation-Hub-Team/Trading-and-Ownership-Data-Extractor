@@ -1,0 +1,8 @@
+company_symbol,year,retained_earnings,foreign_ownership_pct,reinvested_earnings,pdf_filename,company_name,error
+2010,2024,20056576.0,49.0,9827722.24,2010_annual_2024.pdf,سابك,
+1050,2024,4509836.0,49.0,2209819.64,1050_annual_2024.pdf,بي اس اف,
+1010,2024,,49.0,,1010_annual_2024.pdf,الرياض,No Retained Earnings found
+1030,2024,,49.0,,1030_annual_2024.pdf,الإستثمار,could not convert string to float: ''
+1080,2024,6216685.0,49.0,3046175.65,1080_annual_2024.pdf,العربي,
+1060,2024,12578.0,49.0,6163.22,1060_annual_2024.pdf,الأول,
+1020,2024,,49.0,,1020_annual_2024.pdf,الجزيرة,No Retained Earnings found
