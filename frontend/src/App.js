@@ -13,9 +13,16 @@ import CloseIcon from "@mui/icons-material/Close";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import Tooltip from '@mui/material/Tooltip';
 
 // Evidence Modal Component
 const EvidenceModal = ({ open, onClose, evidenceData, loading, error }) => {
+  const [verifyMode, setVerifyMode] = useState(null); // null | 'confirm' | 'incorrect'
+  const [correctionValue, setCorrectionValue] = useState("");
+  const [correctionFeedback, setCorrectionFeedback] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
   return (
     <Modal
       open={open}
@@ -110,6 +117,73 @@ const EvidenceModal = ({ open, onClose, evidenceData, loading, error }) => {
                 }}>
                   {evidenceData.context}
                 </Box>
+              </Box>
+            )}
+            {evidenceData && evidenceData.context && !loading && (
+              <Box sx={{ mt: 2, textAlign: 'left' }}>
+                <Tooltip title="تعديل النتيجة" arrow>
+                  <IconButton
+                    size="small"
+                    sx={{ color: '#1e6641', opacity: 0.7, ml: 1, '&:hover': { opacity: 1, bgcolor: '#e8f5ee' } }}
+                    onClick={() => setVerifyMode(verifyMode ? null : 'form')}
+                  >
+                    <InfoOutlinedIcon fontSize="small" />
+                  </IconButton>
+                </Tooltip>
+                {verifyMode === 'form' && (
+                  <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <TextField
+                      size="small"
+                      label="القيمة الصحيحة"
+                      value={correctionValue}
+                      onChange={e => setCorrectionValue(e.target.value)}
+                      sx={{ maxWidth: 180 }}
+                    />
+                    <TextField
+                      size="small"
+                      label="ملاحظات (اختياري)"
+                      value={correctionFeedback}
+                      onChange={e => setCorrectionFeedback(e.target.value)}
+                      sx={{ maxWidth: 250 }}
+                    />
+                    <Button
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      sx={{ fontSize: 13, px: 2, py: 0.5, mt: 1, alignSelf: 'flex-start' }}
+                      onClick={async () => {
+                        setSubmitted(true);
+                        // Send correction to backend
+                        try {
+                          const res = await fetch('http://localhost:5002/api/correct_retained_earnings', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              company_symbol: evidenceData.company_symbol || evidenceData.symbol,
+                              correct_value: correctionValue,
+                              feedback: correctionFeedback,
+                            })
+                          });
+                          const data = await res.json();
+                          if (data.status === 'success' && data.updated) {
+                            if (typeof window.updateRowAfterCorrection === 'function') {
+                              window.updateRowAfterCorrection(data.updated);
+                            }
+                          }
+                        } catch (e) {}
+                        setVerifyMode(null);
+                      }}
+                    >
+                      إرسال التصحيح
+                    </Button>
+                    {submitted && (
+                      <Typography sx={{ color: '#1e6641', fontSize: 14, mt: 1 }}>شكرًا لملاحظتك! تم تسجيل التصحيح.</Typography>
+                    )}
+                  </Box>
+                )}
+                {submitted && !verifyMode && (
+                  <Typography sx={{ color: '#1e6641', fontSize: 14, mt: 1 }}>شكرًا لملاحظتك! تم تسجيل التصحيح.</Typography>
+                )}
               </Box>
             )}
           </Box>
@@ -365,6 +439,25 @@ function App() {
 
   useEffect(() => {
     fetchData();
+  }, []);
+
+  // In App(), define a function to update the row and attach it to window so the modal can call it
+  useEffect(() => {
+    window.updateRowAfterCorrection = (updated) => {
+      setRows((prevRows) => prevRows.map(row => {
+        if (row.symbol && updated.company_symbol && row.symbol.toString() === updated.company_symbol.toString()) {
+          return {
+            ...row,
+            retained_earnings: updated.retained_earnings || updated.value || '',
+            reinvested_earnings: updated.reinvested_earnings || '',
+            year: updated.year || '',
+            error: updated.error || '',
+          };
+        }
+        return row;
+      }));
+    };
+    return () => { window.updateRowAfterCorrection = undefined; };
   }, []);
 
   const filteredRows = rows.filter(
