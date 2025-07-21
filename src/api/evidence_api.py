@@ -12,6 +12,8 @@ import logging
 import subprocess
 from datetime import datetime
 import pandas as pd
+from apscheduler.schedulers.background import BackgroundScheduler
+import shutil
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -482,6 +484,186 @@ def create_app():
                 "status": "error", 
                 "message": f"Failed to update ownership data: {str(e)}"
             }), 500
+
+    @app.route('/api/ownership_snapshots')
+    def list_ownership_snapshots():
+        """
+        List all archived quarterly Excel files for user download
+        """
+        from pathlib import Path
+        import re
+        project_root = Path(__file__).parent.parent.parent
+        archives_dir = project_root / 'output' / 'archives'
+        result = []
+        if not archives_dir.exists():
+            return jsonify([])
+        for quarter_dir in sorted(archives_dir.iterdir()):
+            if quarter_dir.is_dir():
+                # Example: output/archives/2024_Q2/financial_analysis_2024_Q2.xlsx
+                for file in quarter_dir.glob('financial_analysis_*.xlsx'):
+                    # Extract year and quarter from folder name
+                    m = re.match(r'(\d{4})_Q(\d+)', quarter_dir.name)
+                    if m:
+                        year = int(m.group(1))
+                        quarter = int(m.group(2))
+                    else:
+                        year = None
+                        quarter = None
+                    # Use file modified time as snapshot date
+                    snapshot_date = file.stat().st_mtime
+                    from datetime import datetime
+                    snapshot_date_str = datetime.fromtimestamp(snapshot_date).strftime('%Y-%m-%d')
+                    result.append({
+                        'quarter': f'Q{quarter}',
+                        'year': year,
+                        'snapshot_date': snapshot_date_str,
+                        'download_url': f'/snapshots/{year}_Q{quarter}.xlsx'
+                    })
+        return jsonify(result)
+
+    @app.route('/snapshots/<year_q>.xlsx')
+    def download_snapshot(year_q):
+        """
+        Download a specific archived Excel file by year and quarter
+        """
+        from pathlib import Path
+        project_root = Path(__file__).parent.parent.parent
+        archives_dir = project_root / 'output' / 'archives'
+        # year_q is like 2024_Q2
+        file_path = archives_dir / year_q / f'financial_analysis_{year_q}.xlsx'
+        if not file_path.exists():
+            return jsonify({'error': 'File not found'}), 404
+        return send_file(str(file_path), as_attachment=True, download_name=f'ownership_{year_q}.xlsx', mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    @app.route('/api/user_exports')
+    def list_user_exports():
+        """
+        List all user-triggered Excel exports in output/excel/
+        """
+        from pathlib import Path
+        from datetime import datetime
+        project_root = Path(__file__).parent.parent.parent
+        user_exports_dir = project_root / 'output' / 'excel'
+        result = []
+        if not user_exports_dir.exists():
+            return jsonify([])
+        for file in sorted(user_exports_dir.glob('financial_analysis_*.xlsx'), key=lambda f: f.stat().st_mtime, reverse=True):
+            export_date = datetime.fromtimestamp(file.stat().st_mtime).strftime('%Y-%m-%d %H:%M:%S')
+            result.append({
+                'filename': file.name,
+                'export_date': export_date,
+                'download_url': f'/user_exports/{file.name}'
+            })
+        return jsonify(result)
+
+    @app.route('/user_exports/<filename>')
+    def download_user_export(filename):
+        """
+        Download a user-triggered Excel export by filename
+        """
+        from pathlib import Path
+        project_root = Path(__file__).parent.parent.parent
+        user_exports_dir = project_root / 'output' / 'excel'
+        file_path = user_exports_dir / filename
+        if not file_path.exists():
+            return jsonify({'error': 'File not found'}), 404
+        return send_file(str(file_path), as_attachment=True, download_name=filename, mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+
+    @app.route('/api/user_exports/<filename>', methods=['DELETE'])
+    def delete_user_export(filename):
+        """
+        Delete a user-triggered Excel export by filename
+        """
+        from pathlib import Path
+        project_root = Path(__file__).parent.parent.parent
+        user_exports_dir = project_root / 'output' / 'excel'
+        file_path = user_exports_dir / filename
+        if not file_path.exists():
+            return jsonify({'error': 'File not found'}), 404
+        try:
+            file_path.unlink()
+            return jsonify({'status': 'success', 'message': 'File deleted'})
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+    # --- Quarterly Scheduler Setup ---
+    def scheduled_refresh_and_archive():
+        try:
+            logger.info("[Scheduler] Running quarterly refresh and archive...")
+            # 1. Recalculate reinvested earnings
+            subprocess.run(['python', 'src/calculators/calculate_reinvested_earnings.py'], check=True)
+            # 2. Regenerate evidence screenshots
+            subprocess.run(['python', 'src/utils/generate_evidence_screenshots.py'], check=True)
+            # 3. Export Excel
+            from src.utils.export_to_excel import ExcelExporter
+            import pandas as pd
+            import json
+            from datetime import datetime
+            from pathlib import Path
+            project_root = Path(__file__).parent.parent.parent
+            # Merge data like in /api/export_excel
+            ownership_json_path = project_root / "data/ownership/foreign_ownership_data.json"
+            csv_path = project_root / "data/results/reinvested_earnings_results.csv"
+            with open(ownership_json_path, 'r', encoding='utf-8') as f:
+                ownership_data = json.load(f)
+            earnings_data = pd.read_csv(csv_path)
+            earnings_map = {}
+            for _, row in earnings_data.iterrows():
+                symbol = str(row.get('company_symbol', '')).strip()
+                if symbol:
+                    earnings_map[symbol] = {
+                        'retained_earnings': row.get('retained_earnings', ''),
+                        'reinvested_earnings': row.get('reinvested_earnings', ''),
+                        'year': row.get('year', ''),
+                        'error': row.get('error', '')
+                    }
+            merged_data = []
+            for ownership_row in ownership_data:
+                symbol = str(ownership_row.get('symbol', '')).strip()
+                earnings_info = earnings_map.get(symbol, {})
+                merged_row = {
+                    'company_symbol': symbol,
+                    'company_name': ownership_row.get('company_name', ''),
+                    'foreign_ownership': ownership_row.get('foreign_ownership', ''),
+                    'max_allowed': ownership_row.get('max_allowed', ''),
+                    'investor_limit': ownership_row.get('investor_limit', ''),
+                    'retained_earnings': earnings_info.get('retained_earnings', ''),
+                    'reinvested_earnings': earnings_info.get('reinvested_earnings', ''),
+                    'year': earnings_info.get('year', ''),
+                    'error': earnings_info.get('error', '')
+                }
+                merged_data.append(merged_row)
+            data = pd.DataFrame(merged_data)
+            exporter = ExcelExporter()
+            output_path = exporter.export_dashboard_table(data)
+            # 4. Archive results
+            now = datetime.now()
+            quarter = (now.month - 1) // 3 + 1
+            archive_dir = project_root / f"output/archives/{now.year}_Q{quarter}"
+            archive_dir.mkdir(parents=True, exist_ok=True)
+            # Copy main results
+            shutil.copy(csv_path, archive_dir / f"reinvested_earnings_results_{now.year}_Q{quarter}.csv")
+            if output_path:
+                shutil.copy(output_path, archive_dir / f"financial_analysis_{now.year}_Q{quarter}.xlsx")
+            # Optionally: copy screenshots or other files
+            logger.info(f"[Scheduler] Archived results to {archive_dir}")
+        except Exception as e:
+            logger.error(f"[Scheduler] Error in scheduled refresh: {e}")
+
+    # Start scheduler only once (avoid in child processes)
+    if os.environ.get('WERKZEUG_RUN_MAIN', 'true') == 'true':
+        scheduler = BackgroundScheduler()
+        scheduler.add_job(
+            scheduled_refresh_and_archive,
+            'cron',
+            month='3,6,9,12',
+            day='last',
+            hour=23,
+            minute=59,
+            id='quarterly_refresh_and_archive',
+            replace_existing=True
+        )
+        scheduler.start()
 
     return app
 

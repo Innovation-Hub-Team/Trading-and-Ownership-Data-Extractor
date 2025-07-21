@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { DataGrid } from "@mui/x-data-grid";
-import Button from "@mui/material/Button";
 import Box from "@mui/material/Box";
 import TextField from "@mui/material/TextField";
 import Paper from "@mui/material/Paper";
@@ -16,6 +15,25 @@ import Alert from "@mui/material/Alert";
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Tooltip from '@mui/material/Tooltip';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import DownloadIcon from '@mui/icons-material/Download';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Collapse from '@mui/material/Collapse';
+import MenuIcon from '@mui/icons-material/Menu';
+import FolderOpenIcon from '@mui/icons-material/FolderOpen';
+import ExpandLess from '@mui/icons-material/ExpandLess';
+import ExpandMore from '@mui/icons-material/ExpandMore';
+import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 
 // Evidence Modal Component
 const EvidenceModal = ({ open, onClose, evidenceData, loading, error }) => {
@@ -263,6 +281,16 @@ function App() {
   const [evidenceData, setEvidenceData] = useState(null);
   const [evidenceLoading, setEvidenceLoading] = useState(false);
   const [evidenceError, setEvidenceError] = useState(null);
+  const [snapshots, setSnapshots] = useState([]);
+  const [snapshotsLoading, setSnapshotsLoading] = useState(false);
+  const [snapshotsError, setSnapshotsError] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [snapshotsExpanded, setSnapshotsExpanded] = useState(false);
+  const [userExports, setUserExports] = useState([]);
+  const [userExportsLoading, setUserExportsLoading] = useState(false);
+  const [userExportsError, setUserExportsError] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [fileToDelete, setFileToDelete] = useState(null);
 
   // Function to fetch evidence data
   const fetchEvidence = async (companySymbol) => {
@@ -342,6 +370,18 @@ function App() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
+      // Refetch user exports so the new file appears in the sidebar
+      setUserExportsLoading(true);
+      fetch('http://localhost:5002/api/user_exports')
+        .then(res => res.json())
+        .then(data => {
+          setUserExports(data);
+          setUserExportsLoading(false);
+        })
+        .catch(err => {
+          setUserExportsError('فشل في تحميل ملفات قام المستخدم بحفظها');
+          setUserExportsLoading(false);
+        });
     } catch (error) {
       console.error('Error exporting to Excel:', error);
       alert('فشل في تصدير ملف Excel: ' + error.message);
@@ -473,6 +513,36 @@ function App() {
       });
   };
 
+  // Fetch archived snapshots
+  useEffect(() => {
+    setSnapshotsLoading(true);
+    fetch('http://localhost:5002/api/ownership_snapshots')
+      .then(res => res.json())
+      .then(data => {
+        setSnapshots(data);
+        setSnapshotsLoading(false);
+      })
+      .catch(err => {
+        setSnapshotsError('فشل في تحميل ملفات الفترات السابقة');
+        setSnapshotsLoading(false);
+      });
+  }, []);
+
+  // Fetch user exports
+  useEffect(() => {
+    setUserExportsLoading(true);
+    fetch('http://localhost:5002/api/user_exports')
+      .then(res => res.json())
+      .then(data => {
+        setUserExports(data);
+        setUserExportsLoading(false);
+      })
+      .catch(err => {
+        setUserExportsError('فشل في تحميل ملفات قام المستخدم بحفظها');
+        setUserExportsLoading(false);
+      });
+  }, []);
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -511,8 +581,50 @@ function App() {
     )
     .sort(sortByRetainedEarnings); // Sort by retained earnings
 
+  // Delete handler
+  const handleDeleteExport = (file) => {
+    setFileToDelete(file);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteExport = async () => {
+    if (!fileToDelete) return;
+    try {
+      await fetch(`http://localhost:5002/api/user_exports/${fileToDelete.filename}`, { method: 'DELETE' });
+      setUserExports((prev) => prev.filter(f => f.filename !== fileToDelete.filename));
+    } catch (e) {}
+    setDeleteDialogOpen(false);
+    setFileToDelete(null);
+  };
+
+  const cancelDeleteExport = () => {
+    setDeleteDialogOpen(false);
+    setFileToDelete(null);
+  };
+
   return (
     <Box dir="rtl" sx={{ minHeight: "100vh", bgcolor: "#f4f6fa", fontFamily: "'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif", display: 'flex', flexDirection: 'column' }}>
+      {/* Sidebar menu button at the top right, no background */}
+      { !drawerOpen && (
+        <Box sx={{ width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', pt: 1, pr: 0.2 }}>
+          <IconButton
+            onClick={() => setDrawerOpen(true)}
+            sx={{
+              bgcolor: 'transparent',
+              boxShadow: 'none',
+              borderRadius: 2,
+              p: 0,
+              '&:hover': { bgcolor: '#e3ecfa' },
+            }}
+            size="large"
+            aria-label="فتح القائمة الجانبية"
+          >
+            <MenuIcon sx={{ color: '#1e6641', fontSize: 32 }} />
+          </IconButton>
+        </Box>
+      )}
+
+      {/* Main app container */}
       {/* Header with gradient */}
       <Box sx={{
         width: '100%',
@@ -553,6 +665,7 @@ function App() {
           بيانات محدثة من تداول السعودية - ملكية الأجانب والأرباح المبقاة في الشركات المدرجة
         </Typography>
       </Box>
+
       {/* Main card */}
       <Paper elevation={4} sx={{
         maxWidth: 1800,
@@ -764,6 +877,268 @@ function App() {
       <Box sx={{ textAlign: 'center', color: '#888', py: 2, fontSize: 16, mt: 'auto' }}>
         © {new Date().getFullYear()} مركز الابتكار
       </Box>
+      {/* Delete confirmation dialog */}
+      <Dialog open={deleteDialogOpen} onClose={cancelDeleteExport}>
+        <DialogTitle sx={{ fontWeight: 700, color: '#1e6641' }}>تأكيد الحذف</DialogTitle>
+        <DialogContent>
+          <Typography>هل أنت متأكد أنك تريد حذف هذا الملف؟ لا يمكن التراجع عن هذه العملية.</Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelDeleteExport} sx={{ color: '#37474f' }}>إلغاء</Button>
+          <Button onClick={confirmDeleteExport} sx={{ color: '#b71c1c', fontWeight: 700 }}>حذف</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Sidebar Drawer */}
+      <Drawer
+        anchor="left"
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        PaperProps={{ sx: { width: 340, bgcolor: '#f8f9fa', borderTopRightRadius: 16, borderBottomRightRadius: 16 } }}
+      >
+        <Box
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            px: 3,
+            py: 2.5,
+            bgcolor: '#fff',
+            borderBottom: '1.5px solid #e0e0e0',
+            boxShadow: '0 2px 8px 0 rgba(30,102,65,0.04)',
+            borderTopRightRadius: 16,
+            borderTopLeftRadius: 16,
+            minHeight: 72,
+          }}
+        >
+          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+              <FolderOpenIcon sx={{ color: '#1e6641', fontSize: 24, mb: '2px' }} />
+              <Typography variant="h5" sx={{ fontWeight: 800, color: '#1e6641', fontSize: 20, lineHeight: 1.2 }}>
+                الملفات المحفوظة
+              </Typography>
+            </Box>
+            <IconButton
+              aria-label="إغلاق القائمة الجانبية"
+              onClick={() => setDrawerOpen(false)}
+              sx={{
+                color: '#1e6641',
+                bgcolor: '#f4f6fa',
+                borderRadius: '50%',
+                boxShadow: '0 2px 8px 0 rgba(30,102,65,0.10)',
+                p: 0.5,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'background 0.2s, color 0.2s, box-shadow 0.2s',
+                '&:hover': { bgcolor: '#e3ecfa', color: '#14532d', boxShadow: '0 4px 16px 0 rgba(30,102,65,0.18)' },
+              }}
+            >
+              <ArrowBackIosNewIcon sx={{ fontSize: 18, transform: 'scaleX(-1)' }} />
+            </IconButton>
+          </Box>
+        </Box>
+        {/* Soft divider and extra space below header */}
+        <Box sx={{ height: 18 }} />
+        <Box sx={{ width: '100%', height: 2, bgcolor: '#f4f6fa', mb: 2, borderRadius: 2 }} />
+        {/* User-Saved Exports Section */}
+        <Box sx={{ mt: 2, pb: 0, px: 0 }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            bgcolor: '#e9f5ee',
+            borderRadius: 4,
+            px: 2,
+            py: 1.2,
+            width: '100%',
+            boxSizing: 'border-box',
+            mb: 1.5,
+            gap: 1.5,
+          }}>
+            <Box sx={{ width: 3, height: 24, bgcolor: '#1e6641', borderRadius: 6, mr: 0 }} />
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 700,
+                color: '#1e6641',
+                fontSize: 18,
+                letterSpacing: 0.1,
+                minWidth: 0,
+                pr: 1,
+              }}
+            >
+              ملفاتك المصدّرة
+            </Typography>
+          </Box>
+        </Box>
+        <List>
+          {userExportsLoading ? (
+            <ListItem sx={{ justifyContent: 'center' }}><CircularProgress size={22} sx={{ color: '#1e6641' }} /></ListItem>
+          ) : userExportsError ? (
+            <ListItem><Alert severity="error">{userExportsError}</Alert></ListItem>
+          ) : userExports.length === 0 ? (
+            <ListItem sx={{ justifyContent: 'center', alignItems: 'center', minHeight: 80, width: '100%' }}>
+              <Typography sx={{ color: '#b0b7be', fontSize: 17, textAlign: 'center', width: '100%' }}>
+                لا توجد ملفات محفوظة بعد
+              </Typography>
+            </ListItem>
+          ) : (
+            userExports.map((file, idx) => (
+              <ListItem
+                key={idx}
+                tabIndex={0}
+                sx={{
+                  pl: 3, pr: 3, py: 2.2,
+                  mb: 1.5,
+                  bgcolor: '#fff',
+                  borderRadius: 2.5,
+                  boxShadow: '0 1px 6px 0 rgba(30,102,65,0.06)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  '&:hover .export-delete-btn': { opacity: 1 },
+                  minHeight: 56,
+                  border: 'none',
+                  transition: 'box-shadow 0.2s, transform 0.2s',
+                  '&:hover': {
+                    boxShadow: '0 4px 16px 0 rgba(30,102,65,0.10)',
+                    transform: 'translateY(-2px) scale(1.01)',
+                  },
+                  outline: 'none',
+                  '&:focus': {
+                    boxShadow: '0 0 0 2px #1e664144',
+                  },
+                }}
+              >
+                <Box sx={{ flexGrow: 1 }}>
+                  <Typography sx={{ fontWeight: 500, color: '#1e6641', fontSize: 15 }}>
+                    {(() => {
+                      // file.export_date is 'YYYY-MM-DD HH:mm:ss'
+                      const datePart = file.export_date.split(' ')[0];
+                      const [year, month, day] = datePart.split('-');
+                      return `dashboard-${day}-${month}-${year}`;
+                    })()}
+                  </Typography>
+                </Box>
+                <Tooltip title="تحميل" arrow>
+                  <IconButton
+                    aria-label="تحميل"
+                    href={`http://localhost:5002${file.download_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      color: '#1e6641',
+                      bgcolor: 'transparent',
+                      borderRadius: '50%',
+                      p: 0.7,
+                      mx: 0.5,
+                      transition: 'color 0.2s, background 0.2s',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      height: 36,
+                      width: 36,
+                      minWidth: 36,
+                    }}
+                  >
+                    <DownloadIcon sx={{ fontSize: 22 }} />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="حذف" arrow>
+                  <IconButton
+                    aria-label="حذف"
+                    className="export-delete-btn"
+                    onClick={() => handleDeleteExport(file)}
+                    sx={{
+                      ml: 0.5,
+                      opacity: 0,
+                      color: '#7b7b7b',
+                      bgcolor: 'transparent',
+                      borderRadius: '50%',
+                      p: 0.7,
+                      transition: 'opacity 0.2s, color 0.2s, background 0.2s',
+                      boxShadow: 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 22,
+                      height: 36,
+                      width: 36,
+                      minWidth: 36,
+                      '&:hover': { color: '#444', bgcolor: 'rgba(120,120,120,0.07)' },
+                    }}
+                    size="small"
+                  >
+                    <DeleteOutlineIcon sx={{ fontSize: 22 }} />
+                  </IconButton>
+                </Tooltip>
+              </ListItem>
+            ))
+          )}
+        </List>
+        {/* Divider between sections */}
+        <Box sx={{ mt: 2, pb: 0, px: 0 }}>
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            bgcolor: '#e9f5ee',
+            borderRadius: 4,
+            px: 2,
+            py: 1.2,
+            width: '100%',
+            boxSizing: 'border-box',
+            mb: 1.5,
+            gap: 1.5,
+          }}>
+            <Box sx={{ width: 3, height: 24, bgcolor: '#1e6641', borderRadius: 6, mr: 0 }} />
+            <Typography
+              variant="subtitle1"
+              sx={{
+                fontWeight: 700,
+                color: '#1e6641',
+                fontSize: 18,
+                letterSpacing: 0.1,
+                minWidth: 0,
+                pr: 1,
+              }}
+            >
+              أرشيف الفترات الربعية
+            </Typography>
+          </Box>
+        </Box>
+        <List>
+          {snapshotsLoading ? (
+            <ListItem sx={{ justifyContent: 'center' }}><CircularProgress size={22} sx={{ color: '#1e6641' }} /></ListItem>
+          ) : snapshotsError ? (
+            <ListItem><Alert severity="error">{snapshotsError}</Alert></ListItem>
+          ) : snapshots.length === 0 ? (
+            <ListItem sx={{ justifyContent: 'center', color: '#888' }}>لا توجد ملفات محفوظة بعد</ListItem>
+          ) : (
+            snapshots.map((snap, idx) => (
+              <ListItem key={idx} sx={{ pl: 2, pr: 2, py: 1, borderBottom: '1px solid #e0e0e0', display: 'flex', alignItems: 'center' }}>
+                <span style={{ fontSize: 22, marginLeft: 8 }}>📄</span>
+                <Typography sx={{ fontWeight: 500, color: '#1e6641', flexGrow: 1, fontSize: 16 }}>
+                  {`${snap.year} ${snap.quarter.replace('Q', 'Q')} — ${snap.snapshot_date}`}
+                </Typography>
+                <Tooltip title={`تاريخ الاستخراج: ${snap.snapshot_date}`} arrow>
+                  <Button
+                    variant="contained"
+                    color="success"
+                    size="small"
+                    href={`http://localhost:5002${snap.download_url}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{ minWidth: 0, px: 2, py: 1, borderRadius: 2, fontWeight: 600 }}
+                    startIcon={<DownloadIcon />}
+                  >
+                    تحميل
+                  </Button>
+                </Tooltip>
+              </ListItem>
+            ))
+          )}
+        </List>
+      </Drawer>
     </Box>
   );
 }
