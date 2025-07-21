@@ -66,7 +66,32 @@ class EnhancedRetainedEarningsExtractor:
             "profit",
             "loss"
         ]
-        self.target_years = ["2024", "2023", "2022"]  # Prioritize latest year
+        # Dynamic year detection - will be updated based on content
+        self.target_years = []  # Will be populated dynamically
+        self.most_recent_year = None  # Will store the most recent year found
+        
+    def detect_available_years(self, text: str) -> List[str]:
+        """
+        Dynamically detect available years in the financial statement
+        Returns list of years found, sorted by most recent first
+        """
+        import re
+        from datetime import datetime
+        
+        # Look for 4-digit years (2020-2030 range)
+        year_pattern = r'\b(20[2-3][0-9])\b'
+        years_found = re.findall(year_pattern, text)
+        
+        # Remove duplicates and sort by most recent
+        unique_years = list(set(years_found))
+        unique_years.sort(reverse=True)  # Most recent first
+        
+        # Update target years and most recent year
+        self.target_years = unique_years
+        self.most_recent_year = unique_years[0] if unique_years else None
+        
+        logger.info(f"Detected years in document: {unique_years}")
+        return unique_years
         
     def extract_blocks_with_keywords(self, pdf_path: str) -> List[Dict]:
         """
@@ -76,6 +101,20 @@ class EnhancedRetainedEarningsExtractor:
         
         try:
             doc = fitz.open(pdf_path)
+            
+            # First pass: collect all text to detect available years
+            all_text = ""
+            for page_num in range(len(doc)):
+                page = doc[page_num]
+                all_text += page.get_text()
+            
+            # Detect available years
+            available_years = self.detect_available_years(all_text)
+            
+            # Create priority mapping for years
+            year_priority = {}
+            for i, year in enumerate(available_years):
+                year_priority[year] = 100 - (i * 10)  # Most recent gets highest priority
             
             for page_num in range(len(doc)):
                 page = doc[page_num]
@@ -89,16 +128,14 @@ class EnhancedRetainedEarningsExtractor:
                         
                         # Check if block contains any relevant keywords
                         if any(keyword in text for keyword in self.keywords):
-                            # Prioritize blocks that contain 2024
-                            priority = 0
-                            if '2024' in text:
-                                priority = 100  # Highest priority for 2024
-                            elif '2023' in text:
-                                priority = 50   # Medium priority for 2023
-                            elif '2022' in text:
-                                priority = 25   # Lower priority for 2022
-                            else:
-                                priority = 10   # Default priority
+                            # Calculate priority based on available years
+                            priority = 10  # Default priority
+                            
+                            # Check for year presence and assign priority
+                            for year in available_years:
+                                if year in text:
+                                    priority = year_priority.get(year, 10)
+                                    break
                             
                             relevant_blocks.append({
                                 'page': page_num + 1,
@@ -108,7 +145,7 @@ class EnhancedRetainedEarningsExtractor:
                                 'priority': priority
                             })
             
-            # Sort blocks by priority (2024 first, then 2023, etc.)
+            # Sort blocks by priority (most recent year first)
             relevant_blocks.sort(key=lambda x: x['priority'], reverse=True)
             
             doc.close()
@@ -122,13 +159,24 @@ class EnhancedRetainedEarningsExtractor:
         """
         Enhanced regex extraction with multiple patterns and validation
         """
-        patterns = [
-            # 2024-specific patterns (highest priority)
-            r'Retained\s+Earnings.*2024[:\s]*([\d,]+\.?\d*)',
-            r'([\d,]+\.?\d*).*Retained\s+Earnings.*2024',
-            r'2024.*Retained\s+Earnings[:\s]*([\d,]+\.?\d*)',
-            r'([\d,]+\.?\d*).*2024.*Retained\s+Earnings',
-            
+        # First detect available years if not already done
+        if not self.target_years:
+            self.detect_available_years(text)
+        
+        # Build dynamic patterns based on available years
+        patterns = []
+        
+        # Add patterns for each available year, most recent first
+        for year in self.target_years:
+            patterns.extend([
+                f'Retained\\s+Earnings.*{year}[:\\s]*([\\d,]+\\.?\\d*)',
+                f'([\\d,]+\\.?\\d*).*Retained\\s+Earnings.*{year}',
+                f'{year}.*Retained\\s+Earnings[:\\s]*([\\d,]+\\.?\\d*)',
+                f'([\\d,]+\\.?\\d*).*{year}.*Retained\\s+Earnings',
+            ])
+        
+        # Add general patterns (without specific year)
+        patterns.extend([
             # More precise patterns that require the number to be on the same line or very close
             r'Retained\s+Earnings[:\s]*([\d,]+\.?\d*)',
             r'Retained\s+Earnings\s+([\d,]+\.?\d*)',
@@ -153,7 +201,7 @@ class EnhancedRetainedEarningsExtractor:
             # Patterns with specific financial statement context
             r'Retained\s+Earnings\s*[:\-]?\s*([\d,]+\.?\d*)\s*(?:SAR|million|thousand)?',
             r'([\d,]+\.?\d*)\s*[:\-]?\s*Retained\s+Earnings\s*(?:SAR|million|thousand)?',
-        ]
+        ])
         
         candidates = []
         
@@ -175,42 +223,41 @@ class EnhancedRetainedEarningsExtractor:
                                 'note' in context.lower()):
                                 continue
                             
-                            # Check for year indicators in context with more patterns
+                            # Check for year indicators in context
                             year_score = 0
                             year_found = None
                             
                             # Look for various year patterns
-                            year_patterns = [
-                                r'2024', r'2023', r'2022', r'2021',
-                                r'31\s*December\s*2024', r'31\s*December\s*2023',
-                                r'December\s*31,\s*2024', r'December\s*31,\s*2023',
-                                r'31/12/2024', r'31/12/2023',
-                                r'2024-12-31', r'2023-12-31'
-                            ]
+                            year_patterns = []
+                            for year in self.target_years:
+                                year_patterns.extend([
+                                    year,
+                                    f'31\\s*December\\s*{year}',
+                                    f'December\\s*31,\\s*{year}',
+                                    f'31/12/{year}',
+                                    f'{year}-12-31'
+                                ])
                             
-                            for pattern in year_patterns:
-                                year_matches = re.finditer(pattern, context, re.IGNORECASE)
+                            for year_pattern in year_patterns:
+                                year_matches = re.finditer(year_pattern, context, re.IGNORECASE)
                                 for year_match in year_matches:
                                     year_found = year_match.group(0)
-                                    if '2024' in year_found:
-                                        year_score = 100  # Highest priority for 2024
+                                    # Calculate score based on year priority
+                                    for i, year in enumerate(self.target_years):
+                                        if year in year_found:
+                                            year_score = 100 - (i * 10)  # Most recent gets highest score
+                                            break
+                                    if year_score > 0:
                                         break
-                                    elif '2023' in year_found:
-                                        year_score = 50   # Medium priority for 2023
-                                    elif '2022' in year_found:
-                                        year_score = 25   # Lower priority for 2022
-                                    elif '2021' in year_found:
-                                        year_score = 10   # Lowest priority for 2021
-                                if year_score == 100:  # Found 2024, highest priority
+                                if year_score > 0:
                                     break
                             
-                            # If no specific year found, check if this is likely 2024 data
+                            # If no specific year found, check for indicators
                             if year_score == 0:
-                                # Check for indicators that this might be 2024 data
-                                if any(indicator in context.lower() for indicator in ['current year', 'latest', 'most recent', 'ending 2024']):
-                                    year_score = 80  # High confidence it's 2024
-                                elif any(indicator in context.lower() for indicator in ['previous year', 'prior year', 'ending 2023']):
-                                    year_score = 40  # Medium confidence it's 2023
+                                if any(indicator in context.lower() for indicator in ['current year', 'latest', 'most recent']):
+                                    year_score = 80  # High confidence it's most recent
+                                elif any(indicator in context.lower() for indicator in ['previous year', 'prior year']):
+                                    year_score = 40  # Medium confidence it's previous year
                                 else:
                                     year_score = 30  # Default score if no year found
                                 
@@ -227,7 +274,7 @@ class EnhancedRetainedEarningsExtractor:
                     except ValueError:
                         continue
         
-        # Sort by year score first (highest priority for 2024), then by numeric value
+        # Sort by year score first (highest priority for most recent year), then by numeric value
         if candidates:
             candidates.sort(key=lambda x: (x['year_score'], x['numeric_value']), reverse=True)
             best_match = candidates[0]
@@ -271,11 +318,21 @@ class EnhancedRetainedEarningsExtractor:
             # Combine relevant blocks into context
             context = "\n\n".join([f"Page {block['page']}: {block['text']}" for block in blocks[:5]])  # Limit to first 5 blocks
             
+            # Detect available years if not already done
+            if not self.target_years:
+                combined_text = "\n".join([block['text'] for block in blocks])
+                self.detect_available_years(combined_text)
+            
+            # Build dynamic prompt based on available years
+            most_recent_year = self.most_recent_year or "the most recent year"
+            available_years_text = ", ".join(self.target_years) if self.target_years else "available years"
+            
             prompt = f"""
             Extract retained earnings information from the following financial statement text.
             
-            IMPORTANT: Prioritize the MOST RECENT year (2024) over older years (2023, 2022, etc.).
-            If multiple years are present, always return the 2024 value.
+            IMPORTANT: Prioritize the MOST RECENT year ({most_recent_year}) over older years.
+            Available years in this document: {available_years_text}
+            If multiple years are present, always return the {most_recent_year} value.
             
             Context:
             {context}
@@ -285,9 +342,9 @@ class EnhancedRetainedEarningsExtractor:
                 "retained_earnings": {{
                     "value": "4509836",
                     "currency": "SAR", 
-                    "date": "2024-12-31",
+                    "date": "{most_recent_year}-12-31",
                     "source_section": "Statement of Financial Position",
-                    "note": "End of year balance for 2024",
+                    "note": "End of year balance for {most_recent_year}",
                     "confidence": "high/medium/low"
                 }}
             }}
@@ -299,11 +356,11 @@ class EnhancedRetainedEarningsExtractor:
             }}
             
             Focus on:
-            1. The final retained earnings balance for 2024 (most recent year)
+            1. The final retained earnings balance for {most_recent_year} (most recent year)
             2. The currency (usually SAR for Saudi companies)
-            3. The date (usually 2024-12-31)
+            3. The date (usually {most_recent_year}-12-31)
             4. The source section where it was found
-            5. If 2024 data is not available, then use 2023, but clearly indicate this
+            5. If {most_recent_year} data is not available, then use the next most recent year, but clearly indicate this
             """
             
             response = openai.ChatCompletion.create(
@@ -312,7 +369,7 @@ class EnhancedRetainedEarningsExtractor:
                 temperature=0.1
             )
             content = response.choices[0].message.content
-            logger.info("[LLM] Used GPT-4 for extraction.")
+            logger.info(f"[LLM] Used GPT-4 for extraction. Most recent year: {most_recent_year}")
             try:
                 result = json.loads(content)
                 if result.get('retained_earnings'):
@@ -334,6 +391,15 @@ class EnhancedRetainedEarningsExtractor:
         import pandas as pd
         try:
             with pdfplumber.open(pdf_path) as pdf:
+                # First pass: detect available years from all pages
+                all_text = ""
+                for page in pdf.pages:
+                    all_text += page.extract_text() or ""
+                
+                # Detect available years if not already done
+                if not self.target_years:
+                    self.detect_available_years(all_text)
+                
                 for page_num, page in enumerate(pdf.pages):
                     page_text = page.extract_text() or ""
                     if "retained earnings" in page_text.lower():
@@ -354,6 +420,7 @@ class EnhancedRetainedEarningsExtractor:
                             # Now look for the 'Retained earnings' row
                             retained_row = df[df.iloc[:,0].str.contains("Retained earnings", case=False, na=False)]
                             if not retained_row.empty:
+                                # Try years in order of priority (most recent first)
                                 for year in self.target_years:
                                     if year in df.columns:
                                         value = retained_row[year].values[0]
@@ -366,7 +433,8 @@ class EnhancedRetainedEarningsExtractor:
                                                 'year': year,
                                                 'page': page_num+1,
                                                 'raw_match': f"Retained earnings {year}: {value}",
-                                                'total_blocks': 0
+                                                'total_blocks': 0,
+                                                'most_recent_year': self.most_recent_year
                                             }
             return None
         except Exception as e:
@@ -399,7 +467,9 @@ class EnhancedRetainedEarningsExtractor:
                     'source_section': llm_result.get('source_section'),
                     'confidence': llm_result.get('confidence', 'medium'),
                     'method': 'llm',
-                    'total_blocks': len(blocks)
+                    'total_blocks': len(blocks),
+                    'year': self.most_recent_year,
+                    'most_recent_year': self.most_recent_year
                 }
             else:
                 logger.info("[LLM] LLM extraction failed or returned no value, falling back to regex.")
@@ -414,7 +484,9 @@ class EnhancedRetainedEarningsExtractor:
                     'numeric_value': regex_result['numeric_value'],
                     'raw_match': regex_result['raw_match'],
                     'method': 'regex_blocks',
-                    'total_blocks': len(blocks)
+                    'total_blocks': len(blocks),
+                    'year': self.most_recent_year,
+                    'most_recent_year': self.most_recent_year
                 }
         # 4. Fallback to full text extraction
         full_text_result = self.extract_with_full_text_fallback(pdf_path)
@@ -425,7 +497,9 @@ class EnhancedRetainedEarningsExtractor:
                 'numeric_value': full_text_result['numeric_value'],
                 'raw_match': full_text_result['raw_match'],
                 'method': 'regex_full_text',
-                'total_blocks': len(blocks) if blocks else 0
+                'total_blocks': len(blocks) if blocks else 0,
+                'year': self.most_recent_year,
+                'most_recent_year': self.most_recent_year
             }
         # 5. Fallback to OpenAI Vision on screenshot
         company_symbol = get_company_symbol_from_filename(Path(pdf_path).name)
@@ -443,7 +517,9 @@ class EnhancedRetainedEarningsExtractor:
                         'numeric_value': numeric_value,
                         'raw_match': vision_value,
                         'method': 'openai_vision',
-                        'total_blocks': len(blocks) if blocks else 0
+                        'total_blocks': len(blocks) if blocks else 0,
+                        'year': self.most_recent_year,
+                        'most_recent_year': self.most_recent_year
                     }
                 else:
                     logger.warning(f"[VISION] OpenAI Vision did not return a valid number: {vision_value}")
@@ -617,7 +693,9 @@ def main():
                 'numeric_value': vision_result['numeric_value'],
                 'raw_match': vision_result['value'],
                 'method': 'openai_vision',
-                'total_blocks': len(blocks) if blocks else 0
+                'total_blocks': len(blocks) if blocks else 0,
+                'year': extractor.most_recent_year,
+                'most_recent_year': extractor.most_recent_year
             }
         elif regex_result:
             result = {
@@ -626,14 +704,18 @@ def main():
                 'numeric_value': regex_result['numeric_value'],
                 'raw_match': regex_result['raw_match'],
                 'method': 'regex_blocks',
-                'total_blocks': len(blocks) if blocks else 0
+                'total_blocks': len(blocks) if blocks else 0,
+                'year': extractor.most_recent_year,
+                'most_recent_year': extractor.most_recent_year
             }
         else:
             result = {
                 'success': False,
                 'error': 'No retained earnings found using any method',
                 'method': 'all_methods_failed',
-                'total_blocks': len(blocks) if blocks else 0
+                'total_blocks': len(blocks) if blocks else 0,
+                'year': extractor.most_recent_year,
+                'most_recent_year': extractor.most_recent_year
             }
         # Add confidence and flag fields
         result['confidence'] = confidence
@@ -713,7 +795,8 @@ def main():
             if result['success']:
                 method = result.get('method', 'unknown')
                 source = result.get('source_section', 'N/A')
-                print(f"  {result['company_symbol']}: {result['value']} ({result['numeric_value']:,.0f}) [{method}]")
+                year = result.get('year', 'N/A')
+                print(f"  {result['company_symbol']}: {result['value']} ({result['numeric_value']:,.0f}) [{method}] [Year: {year}]")
 
 if __name__ == "__main__":
     main() 

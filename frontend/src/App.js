@@ -15,6 +15,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import Alert from "@mui/material/Alert";
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import Tooltip from '@mui/material/Tooltip';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 
 // Evidence Modal Component
 const EvidenceModal = ({ open, onClose, evidenceData, loading, error }) => {
@@ -194,15 +195,15 @@ const EvidenceModal = ({ open, onClose, evidenceData, loading, error }) => {
 };
 
 const columns = [
-  { field: "symbol", headerName: "رمز الشركة", width: 120, align: "right", headerAlign: "right" },
-  { field: "company_name", headerName: "الشركة", width: 180, align: "right", headerAlign: "right" },
-  { field: "foreign_ownership", headerName: "ملكية جميع المستثمرين الأجانب", width: 200, align: "right", headerAlign: "right" },
-  { field: "max_allowed", headerName: "الحد الأعلى", width: 150, align: "right", headerAlign: "right" },
-  { field: "investor_limit", headerName: "ملكية المستثمر الاستراتيجي الأجنبي", width: 180, align: "right", headerAlign: "right" },
+  { field: "symbol", headerName: "رمز الشركة", width: 150, align: "right", headerAlign: "right" },
+  { field: "company_name", headerName: "الشركة", width: 250, align: "right", headerAlign: "right" },
+  { field: "foreign_ownership", headerName: "ملكية جميع المستثمرين الأجانب", width: 280, align: "right", headerAlign: "right" },
+  { field: "max_allowed", headerName: "الملكية الحالية", width: 200, align: "right", headerAlign: "right" },
+  { field: "investor_limit", headerName: "ملكية المستثمر الاستراتيجي الأجنبي", width: 280, align: "right", headerAlign: "right" },
   { 
     field: "retained_earnings", 
     headerName: "الأرباح المبقاة", 
-    width: 220, 
+    width: 300, 
     align: "right", 
     headerAlign: "right",
     renderCell: (params) => {
@@ -237,7 +238,7 @@ const columns = [
   { 
     field: "reinvested_earnings", 
     headerName: "الأرباح المعاد استثمارها", 
-    width: 200, 
+    width: 300, 
     align: "right", 
     headerAlign: "right",
     renderCell: (params) => {
@@ -309,6 +310,41 @@ function App() {
     } catch (error) {
       alert('تعذر الاتصال بالخادم: ' + error.message);
       setLoading(false);
+    }
+  };
+
+  // Function to handle Excel export
+  const handleExcelExport = async () => {
+    try {
+      const response = await fetch('http://localhost:5002/api/export_excel');
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      // Get the filename from the response headers
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = 'dashboard_table.xlsx';
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Create blob and download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('فشل في تصدير ملف Excel: ' + error.message);
     }
   };
 
@@ -460,11 +496,20 @@ function App() {
     return () => { window.updateRowAfterCorrection = undefined; };
   }, []);
 
-  const filteredRows = rows.filter(
-    (row) =>
-      (row.company_name && row.company_name.includes(search)) ||
-      (row.symbol && row.symbol.includes(search))
-  );
+  // Sort function to handle retained earnings properly
+  const sortByRetainedEarnings = (a, b) => {
+    const aValue = parseFloat(a.retained_earnings) || 0;
+    const bValue = parseFloat(b.retained_earnings) || 0;
+    return bValue - aValue; // Sort in descending order (highest first)
+  };
+
+  const filteredRows = rows
+    .filter(
+      (row) =>
+        (row.company_name && row.company_name.includes(search)) ||
+        (row.symbol && row.symbol.includes(search))
+    )
+    .sort(sortByRetainedEarnings); // Sort by retained earnings
 
   return (
     <Box dir="rtl" sx={{ minHeight: "100vh", bgcolor: "#f4f6fa", fontFamily: "'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif", display: 'flex', flexDirection: 'column' }}>
@@ -510,7 +555,7 @@ function App() {
       </Box>
       {/* Main card */}
       <Paper elevation={4} sx={{
-        maxWidth: 1200,
+        maxWidth: 1800,
         mx: 'auto',
         p: { xs: 2, md: 4 },
         borderRadius: 4,
@@ -546,31 +591,83 @@ function App() {
             />
           </Box>
           {/* Reset button in the left corner */}
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-start', md: 'flex-end' }, width: { xs: '100%', md: 'auto' }, height: '100%' }}>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: { xs: 'flex-start', md: 'flex-end' }, 
+            width: { xs: '100%', md: 'auto' }, 
+            height: '100%', 
+            gap: 4 
+          }}>
+            {/* Secondary Reset Button */}
             <Button
-              variant="outlined"
-              color="success"
+              variant="text"
               onClick={handleReset}
               sx={{
-                minWidth: 160,
-                fontWeight: 'bold',
-                fontSize: 18,
-                height: 56,
-                borderWidth: 2,
-                borderColor: '#1e6641',
-                color: '#1e6641',
+                minWidth: 150,
+                height: 48,
+                px: 4,
+                py: 2,
+                borderRadius: 3,
+                bgcolor: '#f8f9fa',
+                color: '#6c757d',
+                border: '1px solid #e9ecef',
+                fontWeight: 500,
+                fontSize: 14,
+                textTransform: 'none',
                 '&:hover': {
-                  borderColor: '#1e6641',
-                  background: '#e8f5ee',
+                  bgcolor: '#e9ecef',
+                  borderColor: '#dee2e6',
+                  transform: 'translateY(-1px)',
                 },
                 display: 'flex',
-                flexDirection: 'row',
                 alignItems: 'center',
+                gap: 1.5,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                '&:hover': {
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                },
+                transition: 'all 0.2s ease-in-out'
               }}
             >
+              <RefreshIcon sx={{ fontSize: 18, color: '#6c757d' }} />
               إعادة تعيين
-              <RefreshIcon sx={{ ml: 1, fontSize: 32 }} />
             </Button>
+            
+            {/* Primary Download Button */}
+            <Tooltip title="تصدير الجدول إلى Excel" arrow placement="top">
+              <Button
+                variant="contained"
+                onClick={handleExcelExport}
+                sx={{
+                  minWidth: 150,
+                  height: 48,
+                  px: 4,
+                  py: 2,
+                  borderRadius: 3,
+                  bgcolor: '#1e6641',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: 14,
+                  textTransform: 'none',
+                  '&:hover': {
+                    bgcolor: '#14532d',
+                    transform: 'translateY(-1px)',
+                  },
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1.5,
+                  boxShadow: '0 4px 12px rgba(30, 102, 65, 0.3)',
+                  '&:hover': {
+                    boxShadow: '0 6px 16px rgba(30, 102, 65, 0.4)',
+                  },
+                  transition: 'all 0.2s ease-in-out'
+                }}
+              >
+                <FileDownloadIcon sx={{ fontSize: 18, color: 'white' }} />
+                تصدير الجدول
+              </Button>
+            </Tooltip>
           </Box>
         </Box>
         <DataGrid

@@ -1,8 +1,54 @@
-company_symbol,year,retained_earnings,foreign_ownership_pct,reinvested_earnings,pdf_filename,company_name,error
-2010,2024,20056576.0,49.0,9827722.24,2010_annual_2024.pdf,سابك,
-1050,2024,4509836.0,49.0,2209819.64,1050_annual_2024.pdf,بي اس اف,
-1010,2024,,49.0,,1010_annual_2024.pdf,الرياض,No Retained Earnings found
-1030,2024,,49.0,,1030_annual_2024.pdf,الإستثمار,could not convert string to float: ''
-1080,2024,6216685.0,49.0,3046175.65,1080_annual_2024.pdf,العربي,
-1060,2024,12578.0,49.0,6163.22,1060_annual_2024.pdf,الأول,
-1020,2024,,49.0,,1020_annual_2024.pdf,الجزيرة,No Retained Earnings found
+company_symbol,company_name,foreign_ownership,max_allowed,investor_limit,retained_earnings,reinvested_earnings,year,pdf_filename,error
+2010,سابك,49.0%,5.99%,0.0%,20065576.0,0.0,2027,2010_annual_2024.pdf,
+1050,بي اس اف,49.0%,11.87%,0.0%,4509836.0,0.0,2031,1050_annual_2024.pdf,
+3003,أسمنت المدينة,49.0%,9.93%,0.0%,,,2027,3003_annual_2024.pdf,No retained earnings found using any method
+2200,أنابيب,49.0%,5.05%,0.0%,,,2028,2200_annual_2024.pdf,No retained earnings found using any method
+2150,زجاج,49.0%,3.35%,0.0%,22.0,0.0,2032,2150_annual_2024.pdf,
+1211,معادن,49.0%,11.06%,0.0%,,,2036,1211_annual_2024.pdf,No retained earnings found using any method
+2382,أديس,49.0%,7.45%,0.0%,2446821.0,0.0,2024,2382_annual_2024.pdf,
+1150,الإنماء,49.0%,11.79%,0.0%,,,2027,1150_annual_2024.pdf,No retained earnings found using any method
+1323,يو سي آي سي,49.0%,1.68%,0.0%,146069391.0,0.0,2024,1323_annual_2024.pdf,
+2001,كيمانول,49.0%,3.92%,0.0%,204037799.0,0.0,2023,2001_annual_2024.pdf,
+2300,صناعة الورق,49.0%,3.43%,0.0%,149823520.0,0.0,2024,2300_annual_2024.pdf,
+2240,الزامل للصناعة,49.0%,21.63%,0.0%,,,2027,2240_annual_2024.pdf,No retained earnings found using any method
+3004,أسمنت الشمالية,49.0%,4.29%,0.0%,300506888.0,0.0,2029,3004_annual_2024.pdf,
+1010,الرياض,49.0%,12.5%,0.0%,,,2030,1010_annual_2024.pdf,No retained earnings found using any method
+1183,سهل,49.0%,0.75%,0.0%,,,2029,1183_annual_2024.pdf,No retained earnings found using any method
+2223,لوبريف,49.0%,6.58%,0.0%,,,2029,2223_annual_2024.pdf,No retained earnings found using any method
+2210,نماء للكيماويات,49.0%,2.07%,0.0%,,,2039,2210_annual_2024.pdf,No retained earnings found using any method
+1322,أماك,49.0%,9.88%,14.5%,,,2035,1322_annual_2024.pdf,No retained earnings found using any method
+1201,تكوين,49.0%,3.69%,0.0%,,,2028,1201_annual_2024.pdf,No retained earnings found using any method
+1182,أملاك,49.0%,2.26%,0.0%,,,2027,1182_annual_2024.pdf,No retained earnings found using any method
+2350,كيان السعودية,49.0%,9.27%,0.0%,,,2029,2350_annual_2024.pdf,No retained earnings found using any method
+2222,أرامكو السعودية,49.0%,0.63%,0.0%,1342442.0,0.0,2039,2222_annual_2024.pdf,
+2310,سبكيم العالمية,49.0%,10.54%,0.0%,,,2028,2310_annual_2024.pdf,No retained earnings found using any method
+3002,أسمنت نجران,49.0%,2.71%,0.0%,342315.0,0.0,2024,3002_annual_2024.pdf,
+1140,البلاد,49.0%,9.8%,0.0%,1869134.0,0.0,2024,1140_annual_2024.pdf,
+1301,أسلاك,49.0%,2.11%,0.0%,83511075.0,0.0,2025,1301_annual_2024.pdf,
+2250,المجموعة السعودية,49.0%,8.22%,0.0%,,,2027,2250_annual_2024.pdf,No retained earnings found using any method
+4200,الدريس,49.0%,11.04%,0.0%,,,2024,4200_annual_2024.pdf,No retained earnings found using any method
+1210,بي سي آي,49.0%,3.53%,0.0%,,,2029,1210_annual_2024.pdf,No retained earnings found using any method
+1111,مجموعة تداول,49.0%,10.7%,0.0%,3491737165.0,0.0,2037,1111_annual_2024.pdf,
+2290,ينساب,49.0%,9.55%,0.0%,5349639.0,0.0,2024,2290_annual_2024.pdf,
+2170,اللجين,49.0%,5.02%,0.0%,,,2024,2170_annual_2024.pdf,No retained earnings found using any method
+1304,اليمامة للحديد,49.0%,2.41%,0.0%,10147221.0,0.0,2024,1304_annual_2024.pdf,
+1320,أنابيب السعودية,49.0%,4.24%,16.37%,292709392.0,47916527.470400006,2024,1320_annual_2024.pdf,
+2360,الفخارية,49.0%,2.84%,0.0%,43701861.0,0.0,2025,2360_annual_2024.pdf,
+2381,الحفر العربية,49.0%,3.94%,34.3%,,,2028,2381_annual_2024.pdf,No retained earnings found using any method
+2220,معدنية,49.0%,1.93%,0.0%,,,2027,2220_annual_2024.pdf,No retained earnings found using any method
+1180,الأهلي,49.0%,17.16%,0.0%,,,2034,1180_annual_2024.pdf,No retained earnings found using any method
+2030,المصافي,49.0%,3.12%,0.0%,161776167.0,0.0,2025,2030_annual_2024.pdf,
+1030,الإستثمار,49.0%,10.4%,0.0%,,,2027,1030_annual_2024.pdf,No retained earnings found using any method
+2180,فيبكو,49.0%,2.47%,0.0%,55805475.0,0.0,2024,2180_annual_2024.pdf,
+1080,العربي,49.0%,14.36%,40.0%,6216685.0,2486674.0,2024,1080_annual_2024.pdf,
+2090,جبسكو,49.0%,2.46%,0.0%,,,2024,2090_annual_2024.pdf,No retained earnings found using any method
+1120,الراجحي,49.0%,14.37%,0.0%,,,2029,1120_annual_2024.pdf,No retained earnings found using any method
+1060,الأول,49.0%,15.23%,31.0%,12578.0,3899.18,2024,1060_annual_2024.pdf,
+2020,سابك للمغذيات الزراعية,49.0%,12.61%,0.01%,,,2027,2020_annual_2024.pdf,No retained earnings found using any method
+2060,التصنيع,49.0%,6.0%,0.0%,1909478.0,0.0,2033,2060_annual_2024.pdf,
+2380,بترو رابغ,49.0%,2.31%,37.5%,,,2032,2380_annual_2024.pdf,No retained earnings found using any method
+4030,البحري*,0.0%,0.01%,0.0%,,,2029,4030_annual_2024.pdf,No retained earnings found using any method
+1020,الجزيرة,49.0%,14.42%,0.0%,,,2031,1020_annual_2024.pdf,No retained earnings found using any method
+1321,أنابيب الشرق,49.0%,6.68%,26.49%,747698488.0,198065329.4712,2025,1321_annual_2024.pdf,
+1202,مبكو,49.0%,6.69%,0.0%,184282212.0,0.0,2030,1202_annual_2024.pdf,
+2330,المتقدمة,49.0%,7.69%,0.0%,,,2035,2330_annual_2024.pdf,No retained earnings found using any method
