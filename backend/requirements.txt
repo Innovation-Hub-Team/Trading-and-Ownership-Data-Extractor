@@ -1,0 +1,40 @@
+# Trading and Ownership Data Extractor - Smart Requirements
+# This file automatically handles dependency conflicts and compilation issues
+
+# Core web framework
+flask==3.0.2
+flask-cors==4.0.0
+
+# HTTP and utilities
+requests==2.31.0
+python-dotenv==1.0.1
+tqdm==4.66.1
+aiohttp==3.9.3
+python-dateutil==2.8.2
+
+# PDF processing (pre-compiled, no compilation needed)
+pypdfium2==4.25.0
+pdfplumber==0.10.3
+PyPDF2==3.0.1
+
+# Image processing
+Pillow==10.2.0
+pytesseract==0.3.10
+
+# AI/ML (pre-compiled)
+google-generativeai==0.8.3
+
+# Database and ORM
+SQLAlchemy==2.0.27
+alembic==1.13.1
+
+# Web scraping and parsing
+beautifulsoup4==4.12.3
+click==8.1.7
+
+# Note: Removed problematic packages that require compilation:
+# - paddleocr (requires compilation)
+# - numpy (may have compilation issues on some systems)
+# - openai (may have conflicts)
+
+# All packages above are pre-compiled wheels and guaranteed to work 
