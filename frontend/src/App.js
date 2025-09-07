@@ -19,6 +19,7 @@ import DialogActions from '@mui/material/DialogActions';
 import Button from '@mui/material/Button';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
+import API_BASE_URL from './config/api';
 
 
 // Evidence Modal Component
@@ -91,7 +92,7 @@ const EvidenceModal = ({ open, onClose, evidenceData, loading, error }) => {
                   bgcolor: '#fafafa'
                 }}>
                   <img 
-                    src={`http://localhost:5003${evidenceData.screenshot_url}`} 
+                    src={`${API_BASE_URL}${evidenceData.screenshot_url}`} 
                     alt="Evidence Screenshot"
                     style={{ 
                       maxWidth: '100%', 
@@ -160,7 +161,7 @@ const EvidenceModal = ({ open, onClose, evidenceData, loading, error }) => {
                         setSubmitted(true);
                         // Send correction to backend
                         try {
-                          const res = await fetch('http://localhost:5003/api/correct_retained_earnings', {
+                          const res = await fetch(`${API_BASE_URL}/api/correct_retained_earnings`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
@@ -263,7 +264,7 @@ function App() {
     setEvidenceError(null);
     
     try {
-      const response = await fetch(`http://localhost:5003/api/evidence/${companySymbol}`);
+      const response = await fetch(`${API_BASE_URL}/api/evidence/${companySymbol}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -292,7 +293,7 @@ function App() {
       // Clean up failed uploads first
       cleanFailedUploads();
       
-      const response = await fetch('http://localhost:5003/api/refresh', {
+      const response = await fetch(`${API_BASE_URL}/api/refresh`, {
         method: 'POST',
       });
       const data = await response.json();
@@ -333,7 +334,7 @@ function App() {
       }));
       
       // Send the current table data to backend for export
-      const response = await fetch('http://localhost:5003/api/export_current_table', {
+      const response = await fetch(`${API_BASE_URL}/api/export_current_table`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -368,7 +369,7 @@ function App() {
       
       // Refetch user exports so the new file appears in the sidebar
       setUserExportsLoading(true);
-      fetch('http://localhost:5003/api/user_exports')
+      fetch(`${API_BASE_URL}/api/user_exports`)
         .then(res => res.json())
         .then(data => {
           setUserExports(data);
@@ -427,13 +428,13 @@ function App() {
         formData.append('files[]', file);
       });
       
-      const response = await fetch('http://localhost:5003/api/upload_multiple_pdfs', {
-        method: 'POST',
-        body: formData,
-      });
+      const response = await fetch(`${API_BASE_URL}/api/upload_multiple_pdfs`, {
+          method: 'POST',
+          body: formData,
+        });
       
-      const result = await response.json();
-      
+        const result = await response.json();
+        
       if (result.success) {
         // Process batch results
         console.log(`Batch upload completed: ${result.successful_uploads}/${result.total_files} successful`);
@@ -446,7 +447,7 @@ function App() {
               data: fileResult.data,
               screenshot_path: fileResult.screenshot_paths && fileResult.screenshot_paths.length > 0 ? fileResult.screenshot_paths[0] : null,
             });
-          } else {
+              } else {
             // Show error for failed files
             alert(`فشل في استخراج البيانات من "${fileResult.filename}": ${fileResult.error || 'فشل في الاستخراج'}`);
           }
@@ -455,12 +456,12 @@ function App() {
         // Show batch summary
         if (result.successful_uploads > 0) {
           alert(`تم رفع ${result.successful_uploads} من ${result.total_files} ملف بنجاح!`);
-        }
-      } else {
+          }
+        } else {
         alert(`فشل في رفع الملفات: ${result.error || 'خطأ غير معروف'}`);
-      }
+        }
       
-    } catch (error) {
+      } catch (error) {
       console.error('Error during batch upload:', error);
       alert(`فشل في رفع الملفات: ${error.message}`);
     }
@@ -489,7 +490,7 @@ function App() {
   const confirmDeleteExport = async () => {
     if (!fileToDelete) return;
     try {
-              await fetch(`http://localhost:5003/api/user_exports/${fileToDelete.filename}`, { method: 'DELETE' });
+              await fetch(`${API_BASE_URL}/api/user_exports/${fileToDelete.filename}`, { method: 'DELETE' });
       setUserExports((prev) => prev.filter(f => f.filename !== fileToDelete.filename));
     } catch (e) {}
     setDeleteDialogOpen(false);
@@ -542,7 +543,7 @@ function App() {
       renderCell: (params) => {
         const row = params.row;
         return row.screenshot_path ? (
-                                                             <img src={`http://localhost:5003${row.screenshot_path}`} alt="Evidence" style={{ maxWidth: 80, maxHeight: 80, border: '1px solid #ccc', borderRadius: 4 }} />
+                                                             <img src={`${API_BASE_URL}${row.screenshot_path}`} alt="Evidence" style={{ maxWidth: 80, maxHeight: 80, border: '1px solid #ccc', borderRadius: 4 }} />
         ) : (
           <span style={{ color: '#b71c1c' }}>لايوجد</span>
         );
@@ -884,7 +885,7 @@ function App() {
       localStorage.removeItem('pdfColumns');
       
       // Clear backend CSV file
-      const response = await fetch('http://localhost:5003/api/clear_data', {
+      const response = await fetch(`${API_BASE_URL}/api/clear_data`, {
         method: 'POST',
       });
       
@@ -1041,7 +1042,7 @@ function App() {
   // Fetch archived snapshots
   useEffect(() => {
     setSnapshotsLoading(true);
-            fetch('http://localhost:5003/api/ownership_snapshots')
+            fetch(`${API_BASE_URL}/api/ownership_snapshots`)
       .then(res => res.json())
       .then(data => {
         setSnapshots(data);
@@ -1056,7 +1057,7 @@ function App() {
   // Fetch user exports
   useEffect(() => {
     setUserExportsLoading(true);
-            fetch('http://localhost:5003/api/user_exports')
+            fetch(`${API_BASE_URL}/api/user_exports`)
       .then(res => res.json())
       .then(data => {
         setUserExports(data);
@@ -1660,7 +1661,7 @@ function App() {
                     <Typography sx={{ mb: 1 }}>الأرباح المبقاة: {result.value ? parseFloat(result.value).toLocaleString() : ''} ريال</Typography>
                     {result.screenshot_path && (
                       <Box sx={{ mt: 1 }}>
-                        <img src={`http://localhost:5003${result.screenshot_path}`} alt="Evidence" style={{ maxWidth: '100%', maxHeight: '200px', border: '1px solid #ccc', borderRadius: 4 }} />
+                        <img src={`${API_BASE_URL}${result.screenshot_path}`} alt="Evidence" style={{ maxWidth: '100%', maxHeight: '200px', border: '1px solid #ccc', borderRadius: 4 }} />
                       </Box>
                     )}
                   </Box>
@@ -1696,7 +1697,7 @@ function App() {
           fontWeight: 500,
           color: '#475569'
         }}>
-          © {new Date().getFullYear()} مركز الابتكار
+        © {new Date().getFullYear()} مركز الابتكار
         </Typography>
         <Typography variant="caption" sx={{ 
           display: 'block',
@@ -1756,8 +1757,8 @@ function App() {
             zIndex: 1
           }}>
             هل أنت متأكد من رفع الملفات التالية؟
-          </Typography>
-        </Box>
+              </Typography>
+            </Box>
         
         <DialogContent sx={{ p: { xs: 3, md: 5 } }}>
           {/* Add More Files Button */}
@@ -1896,13 +1897,13 @@ function App() {
                   bgcolor: '#f0f9f0'
                 }
               }}>
-                <Box sx={{
+          <Box sx={{
                   width: 48,
                   height: 48,
                   borderRadius: 3,
                   background: 'linear-gradient(135deg, #1e6641 0%, #2d8a5c 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
+            display: 'flex',
+            alignItems: 'center',
                   justifyContent: 'center',
                   mr: 3,
                   flexShrink: 0,
@@ -1939,8 +1940,8 @@ function App() {
                     display: 'inline-block'
                   }}>
                     {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </Typography>
-                </Box>
+            </Typography>
+          </Box>
                 {/* Remove file button */}
                 <IconButton
                   onClick={() => {
@@ -1961,7 +1962,7 @@ function App() {
                 >
                   <CloseIcon sx={{ fontSize: 20 }} />
                 </IconButton>
-              </Box>
+        </Box>
             ))}
             
             {selectedFiles.length === 0 && (
@@ -2022,12 +2023,12 @@ function App() {
               display: 'inline-block'
             }}>
               إجمالي الملفات: {selectedFiles.length} ملف
-            </Typography>
-          </Box>
+                  </Typography>
+                </Box>
         </DialogContent>
         
         <DialogActions sx={{ 
-          justifyContent: 'center',
+                      justifyContent: 'center',
           pb: 5, 
           px: 5,
           gap: 3
@@ -2035,7 +2036,7 @@ function App() {
           <Button 
             onClick={cancelUpload} 
             variant="outlined"
-            sx={{
+                    sx={{
               color: '#64748b', 
               borderColor: '#cbd5e1',
               minWidth: 140,
@@ -2059,7 +2060,7 @@ function App() {
             onClick={handleFileUpload} 
             variant="contained"
             disabled={uploading || selectedFiles.length === 0}
-            sx={{
+              sx={{
               background: 'linear-gradient(135deg, #1e6641 0%, #2d8a5c 100%)',
               minWidth: 160,
               py: 1.5,
